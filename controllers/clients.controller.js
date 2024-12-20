@@ -259,7 +259,6 @@ const createClient = async(req,res) => {
 
 const verifyAuthCode = async(req, res) => {
     const { otpCode, client_email } = req.query
-    console.log("VerifyAuthCOde",otpCode, client_email)
     if(!client_email || !otpCode) return res.status(400).json({ msg: "Algunos datos obligatorios no fueron proporcionados" })
 
     const query1 = `SELECT auth_code FROM clients WHERE user_email = $1;`
@@ -270,7 +269,6 @@ const verifyAuthCode = async(req, res) => {
 
         await client.query("BEGIN")
         const selectedUser = await client.query(query1, [client_email])
-        console.log(selectedUser.rows)
         const authCode = selectedUser.rows[0].auth_code
         if(authCode !== otpCode) return res.status(400).json({ msg: "El codigo ingresado no coincide" })
         await client.query("UPDATE clients SET auth_code = null WHERE user_email = $1;", [client_email])
