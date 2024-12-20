@@ -42,39 +42,90 @@ const verifyAdminData = async (req, res) => {
         }
         const emailTemplate = `
             <!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Verificación de Cuenta</title>
-</head>
-<body style="font-family: Arial, sans-serif; background-color: #f4f4f9; padding: 20px; margin: 0;">
-    <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden;">
-        <!-- Header -->
-        <tr>
-            <td style="background-color: #2a9d8f; text-align: center; padding: 20px 0;">
-                <h1 style="color: #ffffff; margin: 0; font-size: 28px;">Plantas Emanuel</h1>
-            </td>
-        </tr>
-        
-        <!-- Body -->
-        <tr>
-            <td style="padding: 30px; color: #333333;">
-                <h2 style="font-size: 24px; margin-bottom: 10px;">¡Verificación de tu cuenta!</h2>
-                <p style="font-size: 16px; line-height: 1.6;">Gracias por registrarte en <strong>Plantas Emanuel</strong>. Para completar el proceso de verificación de tu cuenta, por favor usa el siguiente código OTP:</p>
-                
-                <div style="text-align: center; margin: 20px 0;">
-                    <span style="display: inline-block; background-color: #2a9d8f; color: #ffffff; font-size: 32px; font-weight: bold; padding: 15px 30px; border-radius: 8px; letter-spacing: 5px;">
-                        ${otpCode}
-                    </span>
+                <html lang="es">
+                <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>Bienvenido/a a Co-Reparaciones</title>
+                <style>
+                /* Estilos básicos para correos electrónicos */
+                body {
+                    font-family: Arial, sans-serif;
+                    background-color: #ffffff;
+                    color: #000000;
+                    margin: 0;
+                    padding: 0;
+                }
+                .email-container {
+                    width: 100%;
+                    max-width: 600px;
+                    margin: 0 auto;
+                    background-color: #ffffff;
+                    border: 1px solid #000000;
+                    border-radius: 8px;
+                    overflow: hidden;
+                }
+                .header {
+                    text-align: center;
+                    padding: 20px 0;
+                    background-color: #000000;
+                    color: #ffffff;
+                }
+                .header h1 {
+                    margin: 0;
+                    font-size: 24px;
+                    font-weight: bold;
+                }
+                .body {
+                    padding: 20px;
+                    text-align: center;
+                }
+                .body p {
+                    font-size: 16px;
+                    margin-bottom: 20px;
+                }
+                .auth-code {
+                    font-size: 32px;
+                    font-weight: bold;
+                    letter-spacing: 5px;
+                    display: inline-block;
+                    background-color: #f0f0f0;
+                    padding: 10px 20px;
+                    border-radius: 8px;
+                    border: 1px solid #000000;
+                }
+                .footer {
+                    text-align: center;
+                    padding: 20px;
+                    font-size: 14px;
+                    color: #555555;
+                    border-top: 1px solid #000000;
+                }
+                </style>
+                </head>
+                <body>
+
+                <div class="email-container">
+                <!-- Encabezado -->
+                <div class="header">
+                    <h1>Co-Reparaciones</h1>
                 </div>
-                
-                <p style="font-size: 16px; line-height: 1.6;">Este código es válido solo por un tiempo limitado. Si no has solicitado esta verificación, por favor ignora este mensaje.</p>
-            </td>
-        </tr>
-    </table>
-</body>
-</html>
+
+                <!-- Cuerpo del mensaje -->
+                <div class="body">
+                    <p>¡Bienvenido/a nuevamente a Co-Reparaciones!</p>
+                    <p>Para continuar, por favor introduce el siguiente código de autenticación:</p>
+                    <div class="auth-code">${otpCode}</div>
+                </div>
+
+                <div class="footer">
+                    <p>Si no solicitaste este código, por favor ignora este mensaje.</p>
+                    <p>&copy; 2024 Co-Reparaciones. Todos los derechos reservados.</p>
+                </div>
+                </div>
+
+                </body>
+                </html>
 
         `
         const resultEMail = await sendEmail(user_email, "Verificación de Cuenta", emailTemplate)
