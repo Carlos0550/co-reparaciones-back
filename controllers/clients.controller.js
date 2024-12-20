@@ -145,7 +145,12 @@ const createClient = async(req,res) => {
         const countUsers = await client.query(query, [userEmail])
 
         if(countUsers.rowCount > 0) throw new Error("Ya existe un cliente registrado con este correo")
+        
+        
+        
         const otpCode = generateOTPAuthCode()
+
+        await client.query(query1, [userEmail, otpCode])
         
         const emailTemplate = `
             <!DOCTYPE html>
@@ -236,7 +241,10 @@ const createClient = async(req,res) => {
         `
         const emailStatus = await sendEmail(userEmail, "Co-Reparaciones OTP Code", emailTemplate)
 
-        if(emailStatus) return res.status(200).json({msg: "Un codigo de autenticación ha sido enviado a tu correo"})
+        if(emailStatus){
+            await client.query("COMMIT")
+            return res.status(200).json({msg: "Un codigo de autenticación ha sido enviado a tu correo"})
+        }
         throw new Error("No se pudo enviar el codigo de autenticación")
 
     } catch (error) {
@@ -251,9 +259,10 @@ const createClient = async(req,res) => {
 
 const verifyAuthCode = async(req, res) => {
     const { otpCode, client_email } = req.query
+    console.log("VerifyAuthCOde",otpCode, client_email)
     if(!client_email || !otpCode) return res.status(400).json({ msg: "Algunos datos obligatorios no fueron proporcionados" })
 
-    const query1 = `SELECT auth_code FROM clients WHERE client_email = $1;`
+    const query1 = `SELECT auth_code FROM clients WHERE user_email = $1;`
 
     let client;
     try {
@@ -261,9 +270,10 @@ const verifyAuthCode = async(req, res) => {
 
         await client.query("BEGIN")
         const selectedUser = await client.query(query1, [client_email])
+        console.log(selectedUser.rows)
         const authCode = selectedUser.rows[0].auth_code
         if(authCode !== otpCode) return res.status(400).json({ msg: "El codigo ingresado no coincide" })
-        await client.query("UPDATE clients SET auth_code = null WHERE client_email = $1;", [client_email])
+        await client.query("UPDATE clients SET auth_code = null WHERE user_email = $1;", [client_email])
         await client.query("COMMIT")
         return res.status(200).json({ msg: "Codigo verificado con exito" })
     } catch (error) {
