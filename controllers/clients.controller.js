@@ -8,8 +8,8 @@ const loginClientWithEmail = async(req,res) => {
     const { email } = req.params
 
     if(!email) return res.status(400).json({ msg: "Algunos datos obligatorios no fueron proporcionados" })
-    const query1 = `SELECT id FROM clients WHERE client_email = $1;`
-    const query2 = `UPDATE clients SET auth_code = $1 WHERE client_email = $2`
+    const query1 = `SELECT id FROM clients WHERE user_email = $1;`
+    const query2 = `UPDATE clients SET auth_code = $1 WHERE user_email = $2`
 
     let client;
 
@@ -134,8 +134,8 @@ const createClient = async(req,res) => {
 
     if(!userEmail) return res.status(400).json({ msg: "Algunos datos obligatorios no fueron proporcionados" })
 
-    const query = `SELECT id from clients WHERE client_email = $1;`
-    const query1 = `INSERT INTO clients(client_email, auth_code) VALUES($1, $2);`
+    const query = `SELECT id from clients WHERE user_email = $1;`
+    const query1 = `INSERT INTO clients(user_email, auth_code) VALUES($1, $2);`
 
     let client;
     try {
