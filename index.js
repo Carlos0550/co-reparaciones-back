@@ -36,7 +36,7 @@ app.use("/api/clients", clientsRoutes)
 
 cron.schedule("* * * * *", async() => {
     const argentinaTime = dayjs().tz("America/Buenos_Aires")
-    console.log(dayjs(argentinaTime).format("YYYY-MM-DD HH:mm:ss"));    
+    console.log(dayjs(argentinaTime).format("YYYY-MM-DD"));    
     console.log("Ejecutando tarea programada");
 
     const query1 = `UPDATE promotions SET promotion_state = true WHERE promotion_starts <= $1`
