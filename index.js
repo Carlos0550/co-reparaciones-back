@@ -39,16 +39,17 @@ cron.schedule("* * * * *", async() => {
     console.log(dayjs(argentinaTime).format("YYYY-MM-DD"));    
     console.log("Ejecutando tarea programada");
 
-    const query1 = `UPDATE promotions SET promotion_state = true WHERE DATE(promotion_starts) <= $1`
-    const query2 = `UPDATE promotions SET promotion_state = false WHERE DATE(promotion_ends) <= $1`
+    const query1 = `UPDATE promotions SET promotion_state = true WHERE DATE(promotion_starts) = $1`
+    const query2 = `UPDATE promotions SET promotion_state = false WHERE DATE(promotion_ends) = $1`
 
     let client;
     try {
         client = await pool.connect()
 
         const response1 = await client.query(query1, [dayjs(argentinaTime).format("YYYY-MM-DD")])
+        console.log("Filas actualizadas 1", response1.rowCount)
         const response2 = await client.query(query2, [dayjs(argentinaTime).format("YYYY-MM-DD")])
-        console.log("Filas actualizasdas", response1.rowCount, response2.rowCount)
+        console.log("Filas actualizadas 2", response1.rowCount, response2.rowCount)
         if (response1.rowCount === 0 && response2.rowCount === 0) {
             console.log("No se activó ni desactivó ninguna promoción.");
         }
