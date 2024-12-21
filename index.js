@@ -34,7 +34,7 @@ app.use("/api/banners", bannersRouter)
 app.use("/api/colors", colorsRouter)
 app.use("/api/clients", clientsRoutes)
 
-cron.schedule("*/30 * * * *", async() => {
+cron.schedule("* * * * *", async() => {
     const argentinaTime = dayjs().tz("America/Buenos_Aires")
     console.log(dayjs(argentinaTime).format("YYYY-MM-DD HH:mm:ss"));    
     console.log("Ejecutando tarea programada");
