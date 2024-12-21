@@ -39,8 +39,8 @@ cron.schedule("* * * * *", async() => {
     console.log(dayjs(argentinaTime).format("YYYY-MM-DD"));    
     console.log("Ejecutando tarea programada");
 
-    const query1 = `UPDATE promotions SET promotion_state = true WHERE promotion_starts <= $1`
-    const query2 = `UPDATE promotions SET promotion_state = false WHERE promotion_ends <= $1`
+    const query1 = `UPDATE promotions SET promotion_state = true WHERE DATE(promotion_starts) <= $1`
+    const query2 = `UPDATE promotions SET promotion_state = false WHERE DATE(promotion_ends) <= $1`
 
     let client;
     try {
