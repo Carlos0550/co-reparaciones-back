@@ -43,12 +43,12 @@ const getPageColors = async (req, res) => {
         const resultRows = result.rows[0]
         console.log(resultRows)
         return res.status(200).json({
-            headerColor: resultRows?.header_color,
-            footerColor: resultRows?.footer_color,
-            contentColor: resultRows?.maincontent_color,
-            titleColor: resultRows?.title_color,
-            subtitleColor: resultRows?.subtitle_color,
-            paragraphColor: resultRows?.paragraphs_color
+            headerColor: resultRows?.header_color || "#000000",
+            footerColor: resultRows?.footer_color || "#000000",
+            contentColor: resultRows?.maincontent_color || "#ffffff",
+            titleColor: resultRows?.title_color || "#000000",
+            subtitleColor: resultRows?.subtitle_color || "#000000",
+            paragraphColor: resultRows?.paragraphs_color || "#000000"
         })
     } catch (error) {
         console.error(error)
