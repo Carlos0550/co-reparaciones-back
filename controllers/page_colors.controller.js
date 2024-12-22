@@ -40,14 +40,14 @@ const getPageColors = async (req, res) => {
     try {
         client = await pool.connect()
         const result = await client.query(query1)
-        console.log(result.rows)
+        const resultRows = result.rows[0]
         return res.status(200).json({
-            headerColor: result.rows[0]?.header_color,
-            footerColor: result.rows[0]?.footer_color,
-            contentColor: result.rows[0]?.maincontent_color,
-            titleColor: result.rows[0]?.title_color,
-            subtitleColor: result.rows[0]?.subtitle_color,
-            paragraphColor: result.rows[0]?.paragraphs_color
+            headerColor: resultRows?.header_color,
+            footerColor: resultRows?.footer_color,
+            contentColor: resultRows?.maincontent_color,
+            titleColor: resultRows?.title_color,
+            subtitleColor: resultRows?.subtitle_color,
+            paragraphColor: resultRows?.paragraphs_color
         })
     } catch (error) {
         console.error(error)
