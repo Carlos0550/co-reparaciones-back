@@ -61,8 +61,8 @@ cron.schedule("*/30 * * * *", async() => {
 });
 
 
-const PORT = process.env.PORT || 4000;
-app.listen(4000, '0.0.0.0', () => {
-  console.log('Servidor corriendo en http://0.0.0.0:4000');
-});
+app.listen(4000, '::', () => {
+    console.log('Servidor corriendo en http://[::]:4000');
+  });
+  
 
