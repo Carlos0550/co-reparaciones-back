@@ -10,12 +10,13 @@ const savePromotion = async(req,res) => {
         promotion_value,
         promotion_products,
         product_id,
-        promotion_discount
+        promotion_discount,
+        promotion_state
 
      } = req.body
     const promotion_images = req.files
-
-    if(!promotion_name || promotion_images?.length === 0 || !promotion_type || !promotion_start_date || !promotion_end_date) return res.status(400).json({ msg: "Faltan datos importantes" })
+     console.log(promotion_type)
+    if(!promotion_name || promotion_images.length === 0 || !promotion_type || !promotion_start_date || !promotion_end_date) return res.status(400).json({ msg: "Faltan datos importantes" })
 
     if(promotion_type === "single" && !product_id) return res.status(400).json({ msg: "Faltan datos importantes" })
     if(promotion_type === "multiple" && (!promotion_products || !promotion_value)) return res.status(400).json({ msg: "Faltan datos importantes" })
@@ -41,7 +42,9 @@ const savePromotion = async(req,res) => {
         client = await pool.connect()
         await client.query("BEGIN")
 
-        const response1 = await client.query(query1,[promotion_name, promotion_start_date, promotion_end_date, false, promotion_type])
+        const stateOfPromotion = promotion_state === "true" ? true : false
+        console.log("Estado de la promocion: ",stateOfPromotion)
+        const response1 = await client.query(query1,[promotion_name, promotion_start_date, promotion_end_date, stateOfPromotion, promotion_type])
 
         if(response1.rowCount === 0) throw new Error("No se pudo registrar la promocion")
         console.log("Promocion insertada con exito")
