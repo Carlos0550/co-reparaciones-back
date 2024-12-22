@@ -191,6 +191,8 @@ const deletePromotion = async(req,res) => {
         console.log(error)
         await client.query("ROLLBACK")
         res.status(500).json({msg: error.message || "Error interno del servidor al eliminar la promocion"})
+    }finally{
+        if(client) client.release()
     }
 }
 
@@ -211,13 +213,14 @@ const editPromotion = async(req,res) => {
      const { promotion_id } = req.params
     const promotion_images = req.files
 
-    if(!promotion_name || promotion_images?.length === 0 || !promotion_type || !promotion_start_date || !promotion_end_date) return res.status(400).json({ msg: "Faltan datos importantes" })
+    console.log("Promocion: ", req.body)
+    if(!promotion_name || !promotion_id || !promotion_type || !promotion_start_date || !promotion_end_date) return res.status(400).json({ msg: "Faltan datos importantes" })
 
     if(promotion_type === "single" && !product_id) return res.status(400).json({ msg: "Faltan datos importantes" })
     if(promotion_type === "multiple" && (!promotion_products || !promotion_value)) return res.status(400).json({ msg: "Faltan datos importantes" })
     
     let client;
-
+    
     try {
         client = await pool.connect()
         await client.query("BEGIN")
