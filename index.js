@@ -26,6 +26,10 @@ app.use(express.json());
     await checkConnection()
 })()
 
+app.get("/", (req, res) => {
+    res.send("Servidor corriendo");
+})
+
 app.use('/api/admins', adminsRoutes);
 app.use("/api/categories", categoriesRoutes);
 app.use("/api/products", productsRoutes)
