@@ -37,6 +37,7 @@ app.use("/api/promotions", promotionsRouter);
 app.use("/api/banners", bannersRouter)
 app.use("/api/colors", colorsRouter)
 app.use("/api/clients", clientsRoutes)
+app.use("/api/checkout", require("./Mercado_pago/MercadoPago.routes.js"))
 
 cron.schedule("*/30 * * * *", async() => {
     const argentinaTime = dayjs().tz("America/Buenos_Aires")
