@@ -26,7 +26,7 @@ const createPayment = async (req, res) => {
             body: {
                 items: parsedProducts,
                 back_urls: {
-                    success: "http://localhost:5173/payment-success", 
+                    success: "https://co-reparaciones-front.vercel.app/payment-success", 
                     failure: "https://co-reparaciones-front.vercel.app/payment-failure",  
                     pending: "https://co-reparaciones-front.vercel.app/payment-pending"  
                 },
