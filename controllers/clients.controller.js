@@ -1,13 +1,14 @@
 const { pool } = require("../config/database.js");
 const { sendEmail } = require("../emails/sendEmails.js")
+const dayjs = require("dayjs")
 const generateOTPAuthCode = () => {
     const OPTCode = Math.floor(10000 + Math.random() * 90000)
     return OPTCode
 }
-const loginClientWithEmail = async(req,res) => {
+const loginClientWithEmail = async (req, res) => {
     const { email } = req.params
 
-    if(!email) return res.status(400).json({ msg: "Algunos datos obligatorios no fueron proporcionados" })
+    if (!email) return res.status(400).json({ msg: "Algunos datos obligatorios no fueron proporcionados" })
     const query1 = `SELECT id FROM clients WHERE user_email = $1;`
     const query2 = `UPDATE clients SET auth_code = $1 WHERE user_email = $2`
 
@@ -18,12 +19,12 @@ const loginClientWithEmail = async(req,res) => {
 
         await client.query("BEGIN")
         const result1 = await client.query(query1, [email])
-        if(result1.rowCount === 0) throw new Error("El usuario no existe")
+        if (result1.rowCount === 0) throw new Error("El usuario no existe")
         const otpCode = generateOTPAuthCode()
-        
-        const result2 = await client.query(query2,[otpCode, email])
-        if(result2.rowCount === 0) throw new Error("No se pudo generar el codigo de autorizacion")
-        
+
+        const result2 = await client.query(query2, [otpCode, email])
+        if (result2.rowCount === 0) throw new Error("No se pudo generar el codigo de autorizacion")
+
         const emailTemplate = `
             <!DOCTYPE html>
                 <html lang="es">
@@ -115,24 +116,24 @@ const loginClientWithEmail = async(req,res) => {
 
         const emailStatus = await sendEmail(email, "Co-Reparaciones OTP Code", emailTemplate)
 
-        if(emailStatus){
+        if (emailStatus) {
             await client.query("COMMIT")
-            return res.status(200).json({msg: "Un codigo de autenticación ha sido enviado a tu correo"})
+            return res.status(200).json({ msg: "Un codigo de autenticación ha sido enviado a tu correo" })
         }
         throw new Error("No se pudo enviar el codigo de autenticación")
     } catch (error) {
         console.log(error)
         await client.query("ROLLBACK")
         return res.status(500).json({ msg: error.message || "Error interno del servidor al enviar el codigo de autenticación" })
-    }finally{
-        if(client) client.release()
+    } finally {
+        if (client) client.release()
     }
 }
 
-const createClient = async(req,res) => {
+const createClient = async (req, res) => {
     const { userEmail } = req.params
 
-    if(!userEmail) return res.status(400).json({ msg: "Algunos datos obligatorios no fueron proporcionados" })
+    if (!userEmail) return res.status(400).json({ msg: "Algunos datos obligatorios no fueron proporcionados" })
 
     const query = `SELECT id from clients WHERE user_email = $1;`
     const query1 = `INSERT INTO clients(user_email, auth_code) VALUES($1, $2);`
@@ -144,14 +145,14 @@ const createClient = async(req,res) => {
         await client.query("BEGIN")
         const countUsers = await client.query(query, [userEmail])
 
-        if(countUsers.rowCount > 0) throw new Error("Ya existe un cliente registrado con este correo")
-        
-        
-        
+        if (countUsers.rowCount > 0) throw new Error("Ya existe un cliente registrado con este correo")
+
+
+
         const otpCode = generateOTPAuthCode()
 
         await client.query(query1, [userEmail, otpCode])
-        
+
         const emailTemplate = `
             <!DOCTYPE html>
                 <html lang="es">
@@ -241,9 +242,9 @@ const createClient = async(req,res) => {
         `
         const emailStatus = await sendEmail(userEmail, "Co-Reparaciones OTP Code", emailTemplate)
 
-        if(emailStatus){
+        if (emailStatus) {
             await client.query("COMMIT")
-            return res.status(200).json({msg: "Un codigo de autenticación ha sido enviado a tu correo"})
+            return res.status(200).json({ msg: "Un codigo de autenticación ha sido enviado a tu correo" })
         }
         throw new Error("No se pudo enviar el codigo de autenticación")
 
@@ -251,17 +252,18 @@ const createClient = async(req,res) => {
         console.log(error)
         await client.query("ROLLBACK")
         return res.status(500).json({ msg: error.message || "Error interno del servidor al registrar el usuario" })
-    }finally{
-        if(client) client.release()
+    } finally {
+        if (client) client.release()
     }
 
 }
 
-const verifyAuthCode = async(req, res) => {
+const verifyAuthCode = async (req, res) => {
     const { otpCode, client_email } = req.query
-    if(!client_email || !otpCode) return res.status(400).json({ msg: "Algunos datos obligatorios no fueron proporcionados" })
+    if (!client_email || !otpCode) return res.status(400).json({ msg: "Algunos datos obligatorios no fueron proporcionados" })
 
     const query1 = `SELECT auth_code FROM clients WHERE user_email = $1;`
+    const query2 = `SELECT * from clients WHERE user_email = $1`
 
     let client;
     try {
@@ -270,18 +272,134 @@ const verifyAuthCode = async(req, res) => {
         await client.query("BEGIN")
         const selectedUser = await client.query(query1, [client_email])
         const authCode = selectedUser.rows[0].auth_code
-        if(authCode !== otpCode) return res.status(400).json({ msg: "El codigo ingresado no coincide" })
-        await client.query("UPDATE clients SET auth_code = null WHERE user_email = $1;", [client_email])
+
+
+        if (authCode !== otpCode) return res.status(400).json({ msg: "El codigo ingresado no coincide" })
+
+        const tomorrow = dayjs().add(1,"day")
+
+        await client.query("UPDATE clients SET auth_code = null, session_timeout = $1 WHERE user_email = $2;", [tomorrow,client_email])
+        const result2 = await client.query(query2, [client_email])
+        if (result2.rowCount === 0) throw new Error("Hubo un problema al traer los datos del usuario")
+
         await client.query("COMMIT")
-        return res.status(200).json({ msg: "Codigo verificado con exito" })
+        const { auth_code, ...user } = result2.rows[0]
+        return res.status(200).json({ msg: "Codigo verificado con exito", user: { ...user, admin: false, user_type: "client" } })
     } catch (error) {
         console.log(error)
         await client.query("ROLLBACK")
         return res.status(500).json({ msg: error.message || "Error interno del servidor al registrar el usuario" })
-    }finally{
-        if(client) client.release()
+    } finally {
+        if (client) client.release()
     }
 }
 
+const saveClientInfo = async (req, res) => {
+    const { client_id } = req.query
+    const {
+        client_name,
+        client_dni,
+        first_address,
+        second_address,
+        province,
+        client_phone,
+        city,
+        postal_code
+    } = req.body
 
-module.exports = { loginClientWithEmail, verifyAuthCode, createClient }
+    if (
+        !client_dni ||
+        !client_name ||
+        !first_address ||
+        !province ||
+        !client_phone ||
+        !city ||
+        !postal_code ||
+        !client_id
+    ) return res.status(400).json({ msg: "El servidor no recibió correctamente algunos datos " })
+
+    const query1 = `
+    INSERT INTO clients_data (
+            user_fullname,
+            dni,
+            first_address,
+            second_address,
+            province,
+            user_phone,
+            city,
+            postal_code,
+            client_uuid
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+    `;
+
+    const query2 = `
+        UPDATE clients SET is_verified = true WHERE id = $1
+    `
+
+    let client
+    try {
+        client = await pool.connect()
+        await client.query("BEGIN")
+        const response1 = await client.query(query1, [
+            client_name,
+            client_dni,
+            first_address,
+            second_address || "",
+            province,
+            client_phone,
+            city,
+            postal_code,
+            client_id
+        ])
+
+        console.log(response1)
+
+        if (response1.rowCount === 0) throw new Error("Hubo un problema al actualizar la informacion del cliente")
+        const response2 = await client.query(query2, [client_id])
+
+        if (response2.rowCount === 0) throw new Error("Hubo un problema al actualizar la informacion del cliente")
+
+        await client.query("COMMIT")
+        return res.status(200).json({ msg: "Informacion actualizada con exito" })
+    } catch (error) {
+        console.log(error)
+        await client.query("ROLLBACK")
+        return res.status(500).json({ msg: error.message || "Error interno del servidor al actualizar la informacion del cliente" })
+    } finally {
+        if (client) {
+            client.release()
+        }
+    }
+}
+
+const getClientInfo = async (req, res) => {
+    const { client_id } = req.query
+    if (!client_id) return res.status(400).json({ msg: "Algunos datos obligatorios no fueron proporcionados" })
+    
+    const query1 = `
+        SELECT
+            p.*, pd.*
+        FROM clients p
+        LEFT JOIN clients_data pd ON p.id = pd.client_uuid
+        WHERE p.id = $1
+    `
+
+    let client
+    try {
+        client = await pool.connect()
+        const response = await client.query(query1, [client_id])
+
+        if (response.rowCount === 0) throw new Error("Hubo un problema al traer la informacion del cliente")
+        console.log(response.rows[0])
+            return res.status(200).json({ msg: "Informacion obtenida con exito", client: response.rows })
+    } catch (error) {
+        console.log(error)
+        return res.status(500).json({ msg: error.message || "Error interno del servidor al traer la informacion del cliente" })
+    } finally {
+        if (client) {
+            client.release()
+        }
+    }
+}
+
+module.exports = { loginClientWithEmail, verifyAuthCode, createClient, saveClientInfo, getClientInfo }
