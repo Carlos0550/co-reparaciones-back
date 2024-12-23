@@ -41,7 +41,6 @@ const getPageColors = async (req, res) => {
         client = await pool.connect()
         const result = await client.query(query1)
         const resultRows = result.rows[0]
-        console.log(resultRows)
         return res.status(200).json({
             headerColor: resultRows?.header_color || "#000000",
             footerColor: resultRows?.footer_color || "#000000",
