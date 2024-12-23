@@ -171,32 +171,34 @@ const registerAdmin = async (req, res) => {
 
 const loginAdmin = async (req, res) => {
     const { user_email, user_password } = req.body;
-    console.log(user_email, user_password)
+
     if (!user_password || !user_email) return res.status(400).json({ message: "Algunos datos obligatorios no fueron proporcionados" });
 
     const query1 = `
         SELECT * FROM admins WHERE admin_email = $1;
     `
     const query2 = `
-        UPDATE admins SET session_timeout = $1, authorized_session = $2 WHERE admin_email = $3;
+        UPDATE admins SET session_timeout = $1, authorized_session = $2 WHERE admin_email = $3 RETURNING *;
     `
     let client;
     try {
         client = await pool.connect()
-
+        await client.query("BEGIN")
         const response = await client.query(query1, [user_email])
         if (response.rowCount === 0) return res.status(400).json({ msg: "No se pudo encontrar el usuario" })
 
         const userData = response.rows[0]
         const isṔswValid = await verifyHashPassword(user_password, userData.admin_psw)
         if (!isṔswValid) return res.status(400).json({ msg: "Contraseña incorrecta" })
-
-        const response2 = await client.query(query2,[dayjs().add(1,"day").format("YYYY-MM-DD"), true, user_email])
-        console.log(response2)
-
-        if (response2.command !== 'UPDATE') return res.status(400).json({ msg: "No se pudo actualizar la sesión del usuario" });
         
-        return res.status(200).json({ msg: "Usuario logueado con exito", user: { ...userData, admin: true } })
+        const tomorrow = dayjs().add(1,"day")
+
+        const response2 = await client.query(query2,[dayjs(tomorrow).format("YYYY-MM-DD"), true, user_email])
+
+        if (response2.rowCount === 0) return res.status(400).json({ msg: "No se pudo actualizar la sesión del usuario" });
+        
+        await client.query("COMMIT")
+        return res.status(200).json({ msg: "Usuario logueado con exito", user: { ...userData, admin: true, user_type: "admin" } })
 
     } catch (error) {
         console.log(error)
@@ -367,4 +369,6 @@ const changePsw = async (req, res) => {
         if (client) client.release()
     }
 }
+
+
 module.exports = { registerAdmin, loginAdmin, verifyAdminData, verifyOtp, setAdminPsw, changePsw }
