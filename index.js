@@ -64,6 +64,38 @@ cron.schedule("*/30 * * * *", async() => {
     }
 });
 
+app.get("/verify-session", async(req,res) => {
+    const { user_id, user_type } = req.query
+    if(!user_id || !user_type) return res.status(404).json({msg: "El servidor no pudo verificar la sesión del usuario."})
+    
+    const query1 = `SELECT session_timeout, authorized_session FROM admins WHERE id = $1`
+    const query2 = `SELECT session_timeout FROM clients WHERE id = $1`
+
+    let client;
+    try {
+        client = await pool.connect()
+
+        if(user_type === "admin"){
+            const response = await client.query(query1, [user_id])
+            if(response.rowCount === 0) return res.status(400).json({msg: "El servidor no pudo verificar la sesión del usuario."})
+            const userData = response.rows[0]
+            if(dayjs().isAfter(dayjs(userData.session_timeout))) return res.status(400).json({msg: "La sesión del usuario ha caducado.", outOfDate: true})
+
+            return res.status(200).json({msg: "El servidor pudo verificar la sesión del usuario.", outOfDate: false})
+        }else{
+            const response = await client.query(query2, [user_id])
+            if(response.rowCount === 0) return res.status(404).json({msg: "El servidor no pudo verificar la sesión del usuario, quizas el usuario no exista.", outOfDate: false})
+            const userData = response.rows[0]
+            if(dayjs().isAfter(dayjs(userData.session_timeout))) return res.status(400).json({msg: "El servidor no pudo verificar la sesión del usuario.", outOfDate: true})
+
+            return res.status(200).json({msg: "El servidor pudo verificar la sesión del usuario.", outOfDate: false})
+        }
+    } catch (error) {
+        console.log(error)
+        return res.status(400).json({msg: "El servidor no pudo verificar la sesión del usuario."})
+    }
+})
+
 
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {
