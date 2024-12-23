@@ -370,5 +370,191 @@ const changePsw = async (req, res) => {
     }
 }
 
+const sendPurchaseEmails = async(req,res) => {
+    const { products, client_data } = req.body
+    if(!products || !client_data) return res.status(400).json({ msg: "Algunos datos obligatorios no fueron proporcionados" })
 
-module.exports = { registerAdmin, loginAdmin, verifyAdminData, verifyOtp, setAdminPsw, changePsw }
+    let parsedProducts = []
+
+    try {
+        parsedProducts = JSON.parse(products)
+        parsedClientInfo = JSON.parse(client_data)
+    } catch (error) {
+        console.log(error)
+        return res.status(400).json({msg: "Ocurrió un error inesperado al procesar los datos"})
+    }
+
+
+    const query1 = `
+        SELECT admin_email FROM admins
+    `
+
+    const query2 = `
+        INSERT INTO clients_orders(client_id, products_details) VALUES($1, $2)
+    `
+    let client;
+
+    try {
+        client = await pool.connect()
+        await client.query('BEGIN')
+
+        const response1 = await client.query(query1)
+        const adminEmail = await response1.rows[0].admin_email
+
+        const response2 = await client.query(query2,[
+            parsedClientInfo[0].client_uuid,
+            products
+        ]);
+
+        if(response2.rowCount === 0) throw new Error("No se pudo registrar el pedido")
+        const productsFromDB = await client.query("SELECT * FROM products WHERE id = ANY($1)", [parsedProducts.map(prod => prod.id)]);
+        const adminHtmlTemplate = `
+            <!DOCTYPE html>
+                <html lang="en">
+                <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <style>
+                    body {
+                    font-family: Arial, sans-serif;
+                    color: #000;
+                    background-color: #fff;
+                    margin: 0;
+                    padding: 0;
+                    }
+                    .container {
+                    max-width: 600px;
+                    margin: 0 auto;
+                    padding: 20px;
+                    border: 1px solid #000;
+                    }
+                    h1 {
+                    text-align: center;
+                    margin-bottom: 20px;
+                    }
+                    p {
+                    margin: 20px 0;
+                    }
+                    .footer {
+                    text-align: center;
+                    margin-top: 20px;
+                    }
+                    .list {
+                            margin: 20px 0;
+                            padding: 0;
+                            list-style-type: none;
+                        }
+                        .list-item {
+                            margin-bottom: 10px;
+                            padding: 10px;
+                            border: 1px solid #000;
+                        }
+                </style>
+                </head>
+                <body>
+                <div class="container">
+                    <h1>Tienes una nueva venta</h1>
+                    <p>Co-Reparaciones</p>
+                    <p>Por parte de: <strong>${parsedClientInfo[0].user_fullname}</strong></p>
+                    <p>Detalles de la compra</p>
+                    <ul class="list">
+                            ${parsedProducts.map((prod) => {
+                                const productFromDB = productsFromDB.rows.find(pr => pr.id === prod.id);
+                                return productFromDB ? `
+                                    <li class="list-item">
+                                        <p><strong>Producto:</strong> ${prod.product_name}</p>
+                                        <p><strong>Cantidad:</strong> ${prod.quantity}</p>
+                                        <p><strong>Precio:</strong> ${productFromDB.product_price}</p>
+                                    </li>
+                                ` : '';
+                            }).join('')}
+                        </ul>
+                </div>
+                </body>
+                </html>
+        `
+        
+        const clientHtmlTemplate = `
+            <!DOCTYPE html>
+                <html lang="en">
+                <head>
+                    <meta charset="UTF-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                    <style>
+                        body {
+                            font-family: Arial, sans-serif;
+                            color: #000;
+                            background-color: #fff;
+                            margin: 0;
+                            padding: 0;
+                        }
+                        .container {
+                            max-width: 600px;
+                            margin: 0 auto;
+                            padding: 20px;
+                            border: 1px solid #000;
+                        }
+                        h1, h2 {
+                            text-align: center;
+                            margin-bottom: 20px;
+                        }
+                        .list {
+                            margin: 20px 0;
+                            padding: 0;
+                            list-style-type: none;
+                        }
+                        .list-item {
+                            margin-bottom: 10px;
+                            padding: 10px;
+                            border: 1px solid #000;
+                        }
+                        .footer {
+                            text-align: center;
+                            margin-top: 20px;
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div class="container">
+                        <h1>Gracias por tu compra</h1>
+                        <h2>Co-Reparaciones</h2>
+                        <p>Tu compra ha sido procesada exitosamente. Aquí tienes los detalles de tu pedido:</p>
+                        <ul class="list">
+                            ${parsedProducts.map((prod) => {
+                                const productFromDB = productsFromDB.rows.find(pr => pr.id === prod.id);
+                                return productFromDB ? `
+                                    <li class="list-item">
+                                        <p><strong>Producto:</strong> ${prod.product_name}</p>
+                                        <p><strong>Cantidad:</strong> ${prod.quantity}</p>
+                                        <p><strong>Precio:</strong> ${productFromDB.product_price}</p>
+                                    </li>
+                                ` : '';
+                            }).join('')}
+                        </ul>
+                        <div class="footer">
+                            <p>Nos pondremos en contacto contigo a la brevedad para coordinar la entrega.</p>
+                            <p>¡Gracias por elegir Co-Reparaciones!</p>
+                        </div>
+                    </div>
+                </body>
+                </html>
+    `;
+
+    const emailStatus1 = await sendEmail(adminEmail, "Nueva venta", adminHtmlTemplate)
+    const emailStatus2 = await sendEmail(parsedClientInfo[0].user_email, "Compra exitosa", clientHtmlTemplate)
+
+    if (emailStatus1 && emailStatus2) {
+        await client.query("COMMIT")
+        return res.status(200).json({ msg: "Pedido registrado con exito" })
+    }
+
+    } catch (error) {
+        console.error(error);
+    return res.status(500).json({ msg: "Hubo un error procesando la solicitud." });
+    }finally{
+        if(client) client.release()
+    }
+}
+
+
+module.exports = { registerAdmin, loginAdmin, verifyAdminData, verifyOtp, setAdminPsw, changePsw, sendPurchaseEmails }
