@@ -38,6 +38,7 @@ app.use("/api/banners", bannersRouter)
 app.use("/api/colors", colorsRouter)
 app.use("/api/clients", clientsRoutes)
 app.use("/api/checkout", require("./Mercado_pago/MercadoPago.routes.js"))
+app.use("/session", require("./routes/session.routes.js"))
 
 cron.schedule("*/30 * * * *", async() => {
     const argentinaTime = dayjs().tz("America/Buenos_Aires")
@@ -94,6 +95,8 @@ app.get("/verify-session", async(req,res) => {
     } catch (error) {
         console.log(error)
         return res.status(400).json({msg: "El servidor no pudo verificar la sesión del usuario."})
+    }finally{
+        if(client) client.release()
     }
 })
 
