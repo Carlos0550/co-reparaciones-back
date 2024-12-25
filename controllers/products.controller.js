@@ -218,7 +218,47 @@ const deleteProduct = async(req,res) => {
     }
 }
 
+const substractStock = async(req,res) => {
+    const { products } = req.body
+    console.log(products)
+
+    if(!products) return res.status(400).json({ msg: "Faltan datos importantes" });
+
+    const processedProducts = JSON.parse(products)
+    console.log(processedProducts)
+
+    const ids = processedProducts.map((p) => p.id);
+    const quantities = processedProducts.map((p) => p.quantity);
+
+    const query = `
+            UPDATE products 
+            SET stock = stock - data.quantity
+            FROM (SELECT UNNEST($1::UUID[]) AS id, UNNEST($2::bigint[]) AS quantity) AS data
+            WHERE products.id = data.id AND products.stock >= data.quantity;
+    `;
+     let client;
+    try {
+        client = await pool.connect()
+        await client.query("BEGIN")
+        const result = await client.query(query,[ids, quantities])
+        console.log(result)
+        if(result.rowCount === 0){
+            throw new Error("No se pudo actualizar el stock")
+        }
+        
+
+        await client.query("COMMIT")
+        res.status(200).json({ msg: "Stock actualizado con exito" });
+    } catch (error) {
+        console.log(error)
+        await client.query("ROLLBACK")
+        res.status(500).json({ msg: error.message || "Error interno del servidor al actualizar el stock" });
+    }
+
+}
+    
 
 module.exports = {
-    saveProduct, getProducts, updateProduct, deleteProduct
+    saveProduct, getProducts, updateProduct, deleteProduct,
+    substractStock
 }
