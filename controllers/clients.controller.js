@@ -276,9 +276,9 @@ const verifyAuthCode = async (req, res) => {
 
         if (authCode !== otpCode) return res.status(400).json({ msg: "El codigo ingresado no coincide" })
 
-        const tomorrow = dayjs().add(1,"day")
+        const tomorrow = dayjs().add(1, "day")
 
-        await client.query("UPDATE clients SET auth_code = null, session_timeout = $1 WHERE user_email = $2;", [tomorrow,client_email])
+        await client.query("UPDATE clients SET auth_code = null, session_timeout = $1 WHERE user_email = $2;", [tomorrow, client_email])
         const result2 = await client.query(query2, [client_email])
         if (result2.rowCount === 0) throw new Error("Hubo un problema al traer los datos del usuario")
 
@@ -375,7 +375,7 @@ const saveClientInfo = async (req, res) => {
 const getClientInfo = async (req, res) => {
     const { client_id } = req.query
     if (!client_id) return res.status(400).json({ msg: "Algunos datos obligatorios no fueron proporcionados" })
-    
+
     const query1 = `
         SELECT
             p.*, pd.*
@@ -391,7 +391,7 @@ const getClientInfo = async (req, res) => {
 
         if (response.rowCount === 0) throw new Error("Hubo un problema al traer la informacion del cliente")
         console.log(response.rows[0])
-            return res.status(200).json({ msg: "Informacion obtenida con exito", client: response.rows })
+        return res.status(200).json({ msg: "Informacion obtenida con exito", client: response.rows })
     } catch (error) {
         console.log(error)
         return res.status(500).json({ msg: error.message || "Error interno del servidor al traer la informacion del cliente" })
@@ -402,4 +402,28 @@ const getClientInfo = async (req, res) => {
     }
 }
 
-module.exports = { loginClientWithEmail, verifyAuthCode, createClient, saveClientInfo, getClientInfo }
+const getClientOrders = async (req, res) => {
+    const { client_id } = req.params
+    console.log(client_id)
+    if (!client_id) return res.status(400).json({ msg: "Algunos datos obligatorios no fueron proporcionados" })
+
+    const query1 = `SELECT * FROM clients_orders WHERE client_id = $1;`
+
+    let client
+    try {
+        client = await pool.connect()
+        const response = await client.query(query1, [client_id])
+
+        if (response.rowCount === 0) throw new Error("Hubo un problema al traer la informacion del cliente")
+        return res.status(200).json({ orders: response.rows })
+    } catch (error) {
+        console.log(error)
+        return res.status(500).json({ msg: error.message || "Error interno del servidor al traer la informacion del cliente" })
+    } finally {
+        if (client) {
+            client.release()
+        }
+    }
+}
+
+module.exports = { loginClientWithEmail, verifyAuthCode, createClient, saveClientInfo, getClientInfo, getClientOrders }

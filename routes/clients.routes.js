@@ -1,5 +1,5 @@
 const express = require("express")
-const { createClient, verifyAuthCode, loginClientWithEmail, saveClientInfo, getClientInfo } = require("../controllers/clients.controller")
+const { createClient, verifyAuthCode, loginClientWithEmail, saveClientInfo, getClientInfo, getClientOrders } = require("../controllers/clients.controller")
 const Router = express.Router()
 const multer = require("multer")
 
@@ -11,5 +11,6 @@ Router.put("/verify-auth-code", verifyAuthCode)
 Router.put("/login-client/:email", loginClientWithEmail)
 Router.post("/save-client-info", upload.none(), saveClientInfo)
 Router.get("/retrieve-client-info", getClientInfo)
+Router.get("/get-client-orders/:client_id", getClientOrders)
 
 module.exports = Router

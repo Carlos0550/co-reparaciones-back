@@ -21,7 +21,6 @@ const createPayment = async (req, res) => {
                 quantity: Number(element.quantity)
             }})
     
-
         const response = await preference.create({
             body: {
                 items: parsedProducts,

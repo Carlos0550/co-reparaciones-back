@@ -7,8 +7,8 @@ const getSession = async(req,res) => {
      } = req.query
     
     if(!user_id || !user_type) return res.status(400).json({ msg: "No se pudo validar la sesión porque falta información importante" })
-    console.log(user_id)
-    const query1 = `
+
+        const query1 = `
         SELECT * FROM admins WHERE id = $1 
     `
     const query2 = `SELECT 
@@ -41,7 +41,7 @@ const getSession = async(req,res) => {
         }
         if(user_type === "client"){
             const response = await client.query(query2,[user_id])
-            console.log(response.rows)
+
             if (response.rowCount === 0) return res.status(400).json({ msg: "No se pudo encontrar el usuario" })
 
             const userData = response.rows

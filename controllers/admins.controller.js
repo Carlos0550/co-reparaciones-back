@@ -375,7 +375,7 @@ const sendPurchaseEmails = async(req,res) => {
     if(!products || !client_data) return res.status(400).json({ msg: "Algunos datos obligatorios no fueron proporcionados" })
 
     let parsedProducts = []
-
+    let parsedClientInfo = []
     try {
         parsedProducts = JSON.parse(products)
         parsedClientInfo = JSON.parse(client_data)
@@ -383,8 +383,7 @@ const sendPurchaseEmails = async(req,res) => {
         console.log(error)
         return res.status(400).json({msg: "Ocurrió un error inesperado al procesar los datos"})
     }
-
-
+    console.log(parsedClientInfo)
     const query1 = `
         SELECT admin_email FROM admins
     `
@@ -401,6 +400,7 @@ const sendPurchaseEmails = async(req,res) => {
         const response1 = await client.query(query1)
         const adminEmail = await response1.rows[0].admin_email
 
+        console.log("ID del cliente: ", parsedClientInfo[0].client_uuid)
         const response2 = await client.query(query2,[
             parsedClientInfo[0].client_uuid,
             products
