@@ -1,10 +1,10 @@
 
 const { MercadoPagoConfig, Preference } = require("mercadopago");
 
-
 const mercadoPago = new MercadoPagoConfig({
     accessToken: process.env.MERCADO_PAGO_ACCESS_TOKEN,
 });
+
 
 const createPayment = async (req, res) => {
     const { products } = req.body
@@ -20,7 +20,7 @@ const createPayment = async (req, res) => {
                 unit_price: Number(element.unit_price),
                 quantity: Number(element.quantity)
             }})
-        console.log(parsedProducts)
+    
 
         const response = await preference.create({
             body: {
@@ -34,9 +34,11 @@ const createPayment = async (req, res) => {
               }
         });
         
-        res.json({
+        if(response){ 
+            return res.status(200).json({
             init_point: response.init_point,
-        });
+        })};
+        
     } catch (error) {
         console.error("Error al crear el pago:", error);
         res.status(500).json({
