@@ -40,6 +40,7 @@ app.use("/api/clients", clientsRoutes)
 app.use("/api/checkout", require("./Mercado_pago/MercadoPago.routes.js"))
 app.use("/session", require("./routes/session.routes.js"))
 app.use("/api/orders", require("./routes/orders.routes.js"))
+app.use("/api/receipts", require("./routes/recepits.routes.js"))
 
 cron.schedule("*/30 * * * *", async() => {
     const argentinaTime = dayjs().tz("America/Buenos_Aires")
