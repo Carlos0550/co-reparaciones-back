@@ -7,9 +7,6 @@ const generatePdfReceipt = async (req, res) => {
         return res.status(400).json({ msg: 'Los datos del cliente y el carrito de compras son obligatorios.' });
     }
 
-    console.log("client_info: ", client_info);
-    console.log("cart_items: ", cart_items);
-
     const clientData = JSON.parse(client_info);
     const cartItems = JSON.parse(cart_items);
 
