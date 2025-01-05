@@ -5,6 +5,9 @@ const getSession = async(req,res) => {
         user_id,
         user_type
      } = req.query
+
+     console.log("USER ID: ", user_id)
+     console.log("USER TYPE: ", user_type)
     
     if(!user_id || !user_type) return res.status(400).json({ msg: "No se pudo validar la sesión porque falta información importante" })
 
@@ -12,11 +15,16 @@ const getSession = async(req,res) => {
         SELECT * FROM admins WHERE id = $1 
     `
     const query2 = `SELECT 
-        c.*, cd.*
+        c.*, cd.*,
+        cd.id AS client_data_id
         FROM clients c
         LEFT JOIN clients_data cd ON c.id = cd.client_uuid
         WHERE c.id = $1;
 `;
+
+    const query2_1 = `
+        SELECT * FROM clients WHERE id = $1
+    `
 
     const query3 = `
         UPDATE admins SET session_timeout = $1 WHERE id = $2
@@ -43,12 +51,24 @@ const getSession = async(req,res) => {
             const response = await client.query(query2,[user_id])
 
             if (response.rowCount === 0) return res.status(400).json({ msg: "No se pudo encontrar el usuario" })
+            const is_verified = response.rows[0].is_verified
 
-            const userData = response.rows
-            await client.query(query4, [dayjs(tomorrow).format("YYYY-MM-DD"), user_id])
+            if(is_verified){
+                const userData = response.rows
+                await client.query(query4, [dayjs(tomorrow).format("YYYY-MM-DD"), user_id])
+                
+                await client.query("COMMIT")
+                return res.status(200).json({ msg: "Usuario logueado con exito", user: { ...userData, admin: false, user_type: "client" } })
+            }else{
+                const user_data = await client.query(query2_1, [user_id])
+                if (user_data.rowCount === 0) return res.status(400).json({ msg: "No se pudo encontrar el usuario" })
+                const userData = user_data.rows[0]
+                await client.query("COMMIT")
+                return res.status(200).json({ msg: "Usuario logueado con exito", user: { ...userData, admin: false, user_type: "client" } })
+            }
+
+             
             
-            await client.query("COMMIT")
-            return res.status(200).json({ msg: "Usuario logueado con exito", user: { ...userData, admin: false, user_type: "client" } })
         }
 
         return res.status(400).json({ msg: "El servidor no pudo identificar el tipo de sesión" })

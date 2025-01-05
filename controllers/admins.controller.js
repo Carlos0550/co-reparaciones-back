@@ -383,7 +383,6 @@ const sendPurchaseEmails = async(req,res) => {
         console.log(error)
         return res.status(400).json({msg: "Ocurrió un error inesperado al procesar los datos"})
     }
-    console.log(parsedClientInfo)
     const query1 = `
         SELECT admin_email FROM admins
     `
@@ -400,9 +399,8 @@ const sendPurchaseEmails = async(req,res) => {
         const response1 = await client.query(query1)
         const adminEmail = await response1.rows[0].admin_email
 
-        console.log("ID del cliente: ", parsedClientInfo[0].client_uuid)
         const response2 = await client.query(query2,[
-            parsedClientInfo[0].client_uuid,
+            parsedClientInfo.client_uuid,
             products
         ]);
 
@@ -455,7 +453,7 @@ const sendPurchaseEmails = async(req,res) => {
                 <div class="container">
                     <h1>Tienes una nueva venta</h1>
                     <p>Co-Reparaciones</p>
-                    <p>Por parte de: <strong>${parsedClientInfo[0].user_fullname}</strong></p>
+                    <p>Por parte de: <strong>${parsedClientInfo.user_fullname}</strong></p>
                     <p>Detalles de la compra</p>
                     <ul class="list">
                             ${parsedProducts.map((prod) => {
@@ -541,7 +539,7 @@ const sendPurchaseEmails = async(req,res) => {
     `;
 
     const emailStatus1 = await sendEmail(adminEmail, "Nueva venta", adminHtmlTemplate)
-    const emailStatus2 = await sendEmail(parsedClientInfo[0].user_email, "Compra exitosa", clientHtmlTemplate)
+    const emailStatus2 = await sendEmail(parsedClientInfo.user_email, "Compra exitosa", clientHtmlTemplate)
 
     if (emailStatus1 && emailStatus2) {
         await client.query("COMMIT")

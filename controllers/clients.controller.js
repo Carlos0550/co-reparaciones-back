@@ -296,6 +296,7 @@ const verifyAuthCode = async (req, res) => {
 
 const saveClientInfo = async (req, res) => {
     const { client_id } = req.query
+    console.log("ID del cliente al actualizar su informacion: ", client_id)
     const {
         client_name,
         client_dni,
@@ -352,7 +353,6 @@ const saveClientInfo = async (req, res) => {
             client_id
         ])
 
-        console.log(response1)
 
         if (response1.rowCount === 0) throw new Error("Hubo un problema al actualizar la informacion del cliente")
         const response2 = await client.query(query2, [client_id])
@@ -360,6 +360,7 @@ const saveClientInfo = async (req, res) => {
         if (response2.rowCount === 0) throw new Error("Hubo un problema al actualizar la informacion del cliente")
 
         await client.query("COMMIT")
+        console.log("Informacion actualizada con exito")
         return res.status(200).json({ msg: "Informacion actualizada con exito" })
     } catch (error) {
         console.log(error)
@@ -374,7 +375,8 @@ const saveClientInfo = async (req, res) => {
 
 const getClientInfo = async (req, res) => {
     const { client_id } = req.query
-    if (!client_id) return res.status(400).json({ msg: "Algunos datos obligatorios no fueron proporcionados" })
+    console.log("Client ID: ", client_id)
+    if (!client_id || client_id === "null" || client_id === null) return res.status(400).json({ msg: "Algunos datos obligatorios no fueron proporcionados" })
 
     const query1 = `
         SELECT
@@ -404,8 +406,7 @@ const getClientInfo = async (req, res) => {
 
 const getClientOrders = async (req, res) => {
     const { client_id } = req.params
-    console.log(client_id)
-    if (!client_id) return res.status(400).json({ msg: "Algunos datos obligatorios no fueron proporcionados" })
+    if (!client_id || client_id === "null" || client_id === null) return res.status(400).json({ msg: "Algunos datos obligatorios no fueron proporcionados" })
 
     const query1 = `SELECT * FROM clients_orders WHERE client_id = $1;`
 
@@ -414,7 +415,7 @@ const getClientOrders = async (req, res) => {
         client = await pool.connect()
         const response = await client.query(query1, [client_id])
 
-        if (response.rowCount === 0) throw new Error("Hubo un problema al traer la informacion del cliente")
+        if (response.rowCount === 0) return res.status(404).json({ msg: "No se pudo encontrar la informacion del cliente" })
         return res.status(200).json({ orders: response.rows })
     } catch (error) {
         console.log(error)
