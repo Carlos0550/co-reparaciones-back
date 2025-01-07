@@ -220,12 +220,10 @@ const deleteProduct = async(req,res) => {
 
 const substractStock = async(req,res) => {
     const { products } = req.body
-    console.log(products)
 
     if(!products) return res.status(400).json({ msg: "Faltan datos importantes" });
 
     const processedProducts = JSON.parse(products)
-    console.log(processedProducts)
 
     const ids = processedProducts.map((p) => p.id);
     const quantities = processedProducts.map((p) => p.quantity);
