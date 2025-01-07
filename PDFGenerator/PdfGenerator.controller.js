@@ -4,12 +4,19 @@ const path = require("path");
 
 const generatePdfReceipt = async (req, res) => {
     const { client_info, cart_items } = req.body;
-
-    if (!client_info || !cart_items) {
+    if (!cart_items) {
         return res.status(400).json({ msg: 'Los datos del cliente y el carrito de compras son obligatorios.' });
     }
 
-    const clientData = JSON.parse(client_info);
+    let clientData;
+
+    if(client_info){
+        try {
+            clientData = JSON.parse(client_info);
+        } catch (error) {
+            console.log(error)
+        }
+    }
     const cartItems = JSON.parse(cart_items);
 
     try {
@@ -46,16 +53,18 @@ const generatePdfReceipt = async (req, res) => {
         page.drawText(`Fecha: ${new Date().toLocaleDateString()}`, { x: margin, y, size: 12, font: timesRomanFont });
         y -= 20;
 
-        page.drawText(`Cliente: ${clientData[0].user_fullname}`, { x: margin, y, size: 12, font: timesRomanFont });
-        y -= lineHeight;
-        page.drawText(`Correo: ${clientData[0].user_email}`, { x: margin, y, size: 12, font: timesRomanFont });
-        y -= lineHeight;
-        page.drawText(`Teléfono: ${clientData[0].user_phone || "Sin información"}`, { x: margin, y, size: 12, font: timesRomanFont });
-        y -= lineHeight;
+        if (clientData && Object.keys(clientData[0]).length > 0) {
+            page.drawText(`Cliente: ${clientData[0].user_fullname}`, { x: margin, y, size: 12, font: timesRomanFont });
+            y -= lineHeight;
+            page.drawText(`Correo: ${clientData[0].user_email}`, { x: margin, y, size: 12, font: timesRomanFont });
+            y -= lineHeight;
+            page.drawText(`Teléfono: ${clientData[0].user_phone || "Sin información"}`, { x: margin, y, size: 12, font: timesRomanFont });
+            y -= lineHeight;
 
-        const address = `${clientData[0].first_address || ''} ${clientData[0].second_address || ''} ${clientData[0].postal_code || ''}, ${clientData[0].province || ''}`;
-        page.drawText(`Domicilio: ${address.trim() || "Sin información"}`, { x: margin, y, size: 12, font: timesRomanFont });
-        y -= 30;
+            const address = `${clientData[0].first_address || ''} ${clientData[0].second_address || ''} ${clientData[0].postal_code || ''}, ${clientData[0].province || ''}`;
+            page.drawText(`Domicilio: ${address.trim() || "Sin información"}`, { x: margin, y, size: 12, font: timesRomanFont });
+            y -= 30;
+        }
 
         page.drawLine({
             start: { x: margin, y },
