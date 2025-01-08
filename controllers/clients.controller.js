@@ -17,12 +17,12 @@ console.log(password)
     try {
         client = await pool.connect()
         const result1 = await client.query(query1, [email])
-        if (result1.rowCount === 0) throw new Error("El usuario no existe o la contraseña es incorrecta.")
+        if (result1.rowCount === 0) return res.status(404).json({ msg: "No se pudo encontrar el usuario" }) 
 
         const userPassword = result1.rows[0].password
         const isPasswordCorrect = await verifyHashPassword(password, userPassword)
         console.log(isPasswordCorrect)
-        if(!isPasswordCorrect) throw new Error("La contraseña ingresada es incorrecta.")
+        if(!isPasswordCorrect) return res.status(403).json({ msg: "La contraseña es incorrecta" })
 
         return res.status(200).json({ msg: "Usuario logueado con exito", user: { ...result1.rows[0], admin: false, user_type: "client" } })
     } catch (error) {
