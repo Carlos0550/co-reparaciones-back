@@ -16,6 +16,7 @@
     "dayjs": "^1.11.13",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
+    "fontkit": "^2.0.4",
     "mercadopago": "^2.1.0",
     "multer": "^1.4.5-lts.1",
     "node-cron": "^3.0.3",
