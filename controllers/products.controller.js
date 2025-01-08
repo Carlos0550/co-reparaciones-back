@@ -218,42 +218,55 @@ const deleteProduct = async(req,res) => {
     }
 }
 
-const substractStock = async(req,res) => {
-    const { products } = req.body
+const substractStock = async(req, res) => {
+    const { products } = req.body;
 
     if(!products) return res.status(400).json({ msg: "Faltan datos importantes" });
 
-    const processedProducts = JSON.parse(products)
+    const processedProducts = JSON.parse(products);
 
-    const ids = processedProducts.map((p) => p.id);
-    const quantities = processedProducts.map((p) => p.quantity);
+    const filteredProducts = processedProducts.filter(p => p.item_type !== "promotion");
 
-    const query = `
-            UPDATE products 
-            SET stock = stock - data.quantity
-            FROM (SELECT UNNEST($1::UUID[]) AS id, UNNEST($2::bigint[]) AS quantity) AS data
-            WHERE products.id = data.id AND products.stock >= data.quantity;
-    `;
-     let client;
+    if (filteredProducts.length === 0) return res.status(200).json({ msg: "No hay productos para actualizar, saltando actualización." });
+
+    let client;
     try {
-        client = await pool.connect()
-        await client.query("BEGIN")
-        const result = await client.query(query,[ids, quantities])
-        console.log(result)
-        if(result.rowCount === 0){
-            throw new Error("No se pudo actualizar el stock")
+        client = await pool.connect();
+        await client.query("BEGIN");
+
+        for (let i = 0; i < filteredProducts.length; i++) {
+            const product = filteredProducts[i];
+            const { id, quantity } = product;
+            
+            const productQuantityInDb = await client.query("SELECT stock FROM products WHERE id = $1", [id])
+
+            const newQuantity = parseInt(productQuantityInDb.rows[0].stock) - parseInt(quantity);
+            const query2 = `
+                UPDATE products
+                SET stock = $1
+                WHERE id = $2
+                RETURNING product_name, stock
+            `;
+            const result = await client.query(query2, [parseInt(newQuantity), id]);
+            if (result.rowCount === 0) {
+                throw new Error(`No se pudo actualizar el stock del producto con ID ${id}`);
+            }
+
+            console.log(`Stock actualizado para el producto con ID ${id}`);
         }
-        
 
-        await client.query("COMMIT")
-        res.status(200).json({ msg: "Stock actualizado con exito" });
+        await client.query("COMMIT");
+        res.status(200).json({ msg: "Stock actualizado con éxito" });
+
     } catch (error) {
-        console.log(error)
-        await client.query("ROLLBACK")
+        console.log(error);
+        await client.query("ROLLBACK");
         res.status(500).json({ msg: error.message || "Error interno del servidor al actualizar el stock" });
+    } finally {
+        if (client) client.release();
     }
+};
 
-}
     
 
 module.exports = {
