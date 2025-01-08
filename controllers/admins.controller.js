@@ -405,7 +405,7 @@ const sendPurchaseEmails = async(req,res) => {
         ]);
 
         if(response2.rowCount === 0) throw new Error("No se pudo registrar el pedido")
-        const productsFromDB = await client.query("SELECT * FROM products WHERE id = ANY($1)", [parsedProducts.map(prod => prod.id)]);
+        const productsFromDB = await client.query("SELECT * FROM products WHERE id = ANY($1)", [parsedProducts.filter(p => p.item_type !== "promotion").map(prod => prod.id)]);
         const adminHtmlTemplate = `
             <!DOCTYPE html>
                 <html lang="en">
@@ -456,7 +456,16 @@ const sendPurchaseEmails = async(req,res) => {
                     <p>Por parte de: <strong>${parsedClientInfo.user_fullname}</strong></p>
                     <p>Detalles de la compra</p>
                     <ul class="list">
-                            ${parsedProducts.map((prod) => {
+                        ${parsedProducts.map((prod) => {
+                            if (prod.item_type === 'promotion') {
+                                return `
+                                    <li class="list-item">
+                                        <p><strong>Promoción:</strong> ${prod.name}</p>
+                                        <p><strong>Cantidad:</strong> ${prod.quantity}</p>
+                                        <p><strong>Precio:</strong> ${prod.price}</p>
+                                    </li>
+                                `;
+                            } else if (prod.item_type === 'product') {
                                 const productFromDB = productsFromDB.rows.find(pr => pr.id === prod.id);
                                 return productFromDB ? `
                                     <li class="list-item">
@@ -465,8 +474,9 @@ const sendPurchaseEmails = async(req,res) => {
                                         <p><strong>Precio:</strong> ${productFromDB.product_price}</p>
                                     </li>
                                 ` : '';
-                            }).join('')}
-                        </ul>
+                            }
+                        }).join('')}
+                    </ul>
                 </div>
                 </body>
                 </html>
@@ -518,17 +528,29 @@ const sendPurchaseEmails = async(req,res) => {
                         <h2>Co-Reparaciones</h2>
                         <p>Tu compra ha sido procesada exitosamente. Aquí tienes los detalles de tu pedido:</p>
                         <ul class="list">
-                            ${parsedProducts.map((prod) => {
+                        ${parsedProducts.map((prod) => {
+                            if (prod.item_type === 'promotion') {
+                                const itemPrice = parseFloat(prod.price).toLocaleString("es-AR", { style: "currency", currency: "ARS" });
+                                return `
+                                    <li class="list-item">
+                                        <p><strong>Promoción:</strong> ${prod.name}</p>
+                                        <p><strong>Cantidad:</strong> ${prod.quantity}</p>
+                                        <p><strong>Precio:</strong> ${itemPrice}</p>
+                                    </li>
+                                `;
+                            } else if (prod.item_type === 'product') {
                                 const productFromDB = productsFromDB.rows.find(pr => pr.id === prod.id);
+                                const itemPrice = parseFloat(productFromDB.product_price).toLocaleString("es-AR", { style: "currency", currency: "ARS" });
                                 return productFromDB ? `
                                     <li class="list-item">
                                         <p><strong>Producto:</strong> ${prod.product_name}</p>
                                         <p><strong>Cantidad:</strong> ${prod.quantity}</p>
-                                        <p><strong>Precio:</strong> ${productFromDB.product_price}</p>
+                                        <p><strong>Precio:</strong> ${itemPrice}</p>
                                     </li>
                                 ` : '';
-                            }).join('')}
-                        </ul>
+                            }
+                        }).join('')}
+                    </ul>
                         <div class="footer">
                             <p>Nos pondremos en contacto contigo a la brevedad para coordinar la entrega.</p>
                             <p>¡Gracias por elegir Co-Reparaciones!</p>
