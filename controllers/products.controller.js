@@ -163,7 +163,7 @@ const getProductsPaginated = async (req, res) => {
 
 const getProductForPromotion = async (req, res) => {
     const { product_id } = req.params;
-
+    console.log("ID: ", product_id)
     if(!product_id) return res.status(400).json({ msg: "Faltan datos importantes" })
 
     const query = `
