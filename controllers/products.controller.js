@@ -108,7 +108,7 @@ const getProducts = async(req,res) => {
 };
 
 const getProductsPaginated = async (req, res) => {
-    const { page = 1, limit = 35, search = '', productsIds = [] } = req.query;
+    const { page = 1, limit = 35, search = '', productsIds } = req.query;
     const adjustedLimit = parseInt(limit) * page;
 
     let totalQuery;
@@ -122,18 +122,15 @@ const getProductsPaginated = async (req, res) => {
     let queryParams = [adjustedLimit];
     let existingProductIds = [];
 
-
-    if (Array.isArray(productsIds)) {
-        existingProductIds = productsIds.map(id => parseInt(id, 10));
-    } else {
+    if (productsIds && Array.isArray(JSON.parse(productsIds))) {
         try {
-            existingProductIds = JSON.parse(productsIds).map(id => parseInt(id, 10));;
+            existingProductIds = JSON.parse(productsIds).map(id => parseInt(id, 10));
         } catch (error) {
             console.log('Error al parsear los IDs:', error);
         }
     }
 
-    console.log(existingProductIds)
+    console.log(existingProductIds);
 
     if (searchText) {
         totalQuery = `
@@ -142,7 +139,6 @@ const getProductsPaginated = async (req, res) => {
             WHERE LOWER(product_name) LIKE $1
         `;
     
-        // Construir la consulta para los productos solo si existingProductIds no está vacío
         productQuery = `
             SELECT p.*, pi.image_name, pi.image_type, pi.image_size, pi.image_data
             FROM products p
@@ -217,6 +213,7 @@ const getProductsPaginated = async (req, res) => {
         if (client) client.release();
     }
 };
+
 
 
 const getProductForPromotion = async (req, res) => {
