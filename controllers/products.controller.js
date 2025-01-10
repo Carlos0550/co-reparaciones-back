@@ -108,33 +108,44 @@ const getProducts = async(req,res) => {
 };
 
 const getProductsPaginated = async (req, res) => {
-    const { page = 1, limit = 35 } = req.query; 
+    const { page = 1, limit = 35, search = '' } = req.query; // Agregamos 'search' como parámetro opcional
     const offset = (page - 1) * limit;
 
-    const totalQuery = 'SELECT COUNT(*) FROM products';
+    // Realizamos el filtro en el nombre del producto utilizando el LIKE en SQL
+    const searchQuery = `%${search.toLowerCase()}%`; // Buscamos en minúsculas para que no sea sensible a mayúsculas
+
+    // Consultas SQL con filtro de búsqueda
+    const totalQuery = `
+        SELECT COUNT(*) 
+        FROM products
+        WHERE LOWER(product_name) LIKE $1
+    `;
+
     const productQuery = `
         SELECT p.*, pi.image_name, pi.image_type, pi.image_size, pi.image_data
         FROM products p
         LEFT JOIN product_images pi ON p.id = pi.product_id
+        WHERE LOWER(p.product_name) LIKE $1
         ORDER BY p.id ASC
-        LIMIT $1 OFFSET $2
+        LIMIT $2 OFFSET $3
     `;
 
     let client = await pool.connect();
     try {
-
-        const totalResponse = await client.query(totalQuery);
+        // Obtener el total de productos que coinciden con la búsqueda
+        const totalResponse = await client.query(totalQuery, [searchQuery]);
         const totalProducts = parseInt(totalResponse.rows[0].count, 10);
         const totalPages = Math.ceil(totalProducts / limit);
 
-
-        const response = await client.query(productQuery, [limit, offset]);
+        // Obtener los productos con el filtro de búsqueda y paginación
+        const response = await client.query(productQuery, [searchQuery, limit, offset]);
         if (response.rowCount === 0) {
             return res.status(404).json({ msg: "No hay productos registrados" });
         }
 
         const products = response.rows;
 
+        // Procesar las imágenes de los productos
         const productsWithImages = products.reduce((acc, product) => {
             if (!acc[product.id]) {
                 acc[product.id] = { ...product, images: [] };
@@ -156,8 +167,10 @@ const getProductsPaginated = async (req, res) => {
             return acc;
         }, {});
 
+        // Devolver los productos finales con imágenes procesadas
         const finalProducts = Object.values(productsWithImages);
-        return res.status(200).json({ 
+
+        return res.status(200).json({
             products: finalProducts,
             totalProducts,
             totalPages,
@@ -170,6 +183,7 @@ const getProductsPaginated = async (req, res) => {
         if (client) client.release();
     }
 };
+
 
 
 const getProductForPromotion = async (req, res) => {
