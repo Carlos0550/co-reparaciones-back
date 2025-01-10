@@ -144,7 +144,7 @@ const getProductsPaginated = async (req, res) => {
             FROM products p
             LEFT JOIN product_images pi ON p.id = pi.product_id
             WHERE LOWER(p.product_name) LIKE $1
-            ${existingProductIds.length > 0 ? `AND p.id NOT IN (${existingProductIds.map(id => `'${id}'`).join(', ')})` : ''}
+            ${existingProductIds.length > 0 ? `AND p.id NOT IN (${existingProductIds.map(id => `${id}`).join(', ')})` : ''}
             ORDER BY p.id ASC
             LIMIT $2
         `;
