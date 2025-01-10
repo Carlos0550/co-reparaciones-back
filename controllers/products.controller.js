@@ -157,6 +157,7 @@ const getProductsPaginated = async (req, res) => {
     try {
         const totalResponse = await client.query(totalQuery, searchText ? [searchText] : []);
         const totalProducts = parseInt(totalResponse.rows[0].count, 10);
+        console.log(totalProducts)
         const totalPages = Math.ceil(totalProducts / limit);
 
         const response = await client.query(productQuery, queryParams);
