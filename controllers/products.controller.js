@@ -108,7 +108,7 @@ const getProducts = async(req,res) => {
 };
 
 const getProductsPaginated = async (req, res) => {
-    const { page = 1, limit = 10 } = req.query; // Asegúrate de que el límite sea un número razonable
+    const { page = 1, limit = 35 } = req.query; 
     const offset = (page - 1) * limit;
 
     const totalQuery = 'SELECT COUNT(*) FROM products';
@@ -122,12 +122,12 @@ const getProductsPaginated = async (req, res) => {
 
     let client = await pool.connect();
     try {
-        // Obtener el total de productos con imágenes
+
         const totalResponse = await client.query(totalQuery);
         const totalProducts = parseInt(totalResponse.rows[0].count, 10);
         const totalPages = Math.ceil(totalProducts / limit);
 
-        // Obtener los productos paginados
+
         const response = await client.query(productQuery, [limit, offset]);
         if (response.rowCount === 0) {
             return res.status(404).json({ msg: "No hay productos registrados" });
