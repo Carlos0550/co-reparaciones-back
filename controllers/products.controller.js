@@ -161,6 +161,44 @@ const getProductsPaginated = async (req, res) => {
     }
 };
 
+const getProductForPromotion = async (req, res) => {
+    const { product_id } = req.params;
+
+    if(!product_id) return res.status(400).json({ msg: "Faltan datos importantes" })
+
+    const query = `
+        SELECT p.*, pi.image_name, pi.image_type, pi.image_size, pi.image_data
+        FROM products p
+        LEFT JOIN product_images pi ON p.id = pi.product_id
+        WHERE p.id = $1
+    `;
+
+    let client = await pool.connect();
+    try {
+        const response = await client.query(query, [product_id]);
+        console.log("Filas: ", response.rowCount)
+        if (response.rowCount === 0) {
+            return res.status(404).json({ msg: "No hay productos registrados" });
+        }
+
+        const product = response.rows[0];
+
+        if (Buffer.isBuffer(product.image_data)) {
+            const imageBase64 = product.image_data.toString("base64");
+            product.image_data = `data:${product.image_type};base64,${imageBase64}`;
+        } else {
+            console.error(`Image data for product ${product.id} is not a valid Buffer.`);
+        }
+
+        return res.status(200).json({ product });
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({ msg: "Error interno del servidor al encontrar el producto" });
+    } finally {
+        if (client) client.release();
+    }
+}
+
 const updateProduct = async (req, res) => {
     const { product_name, product_description, product_price, product_category, imagesWithEdit, product_stock } = req.body;
     const images = req.files; 
@@ -325,5 +363,5 @@ const substractStock = async(req, res) => {
 
 module.exports = {
     saveProduct, getProducts, updateProduct, deleteProduct,
-    substractStock, getProductsPaginated
+    substractStock, getProductsPaginated, getProductForPromotion
 }
