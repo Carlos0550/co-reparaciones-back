@@ -183,6 +183,12 @@ const getProductsPaginated = async (req, res) => {
         }, {});
 
         const finalProducts = Object.values(productsWithImages);
+        console.log(`
+        *******
+        TOTAL PRODUCTS: ${totalProducts} de la página ${page} con offset de ${offset},
+        PRODUCTOS: ${finalProducts.length}
+        *******    
+        `)
 
         return res.status(200).json({
             products: finalProducts,
