@@ -108,13 +108,13 @@ const getProducts = async(req,res) => {
 };
 
 const getProductsPaginated = async (req, res) => {
-    const { page = 1, limit = 35, search = '' } = req.query; // Agregamos 'search' como parámetro opcional
+    const { page = 1, limit = 35, search = '' } = req.query; // 'search' sigue siendo un parámetro opcional
     const offset = (page - 1) * limit;
 
-    // Realizamos el filtro en el nombre del producto utilizando el LIKE en SQL
-    const searchQuery = `%${search.toLowerCase()}%`; // Buscamos en minúsculas para que no sea sensible a mayúsculas
+    // Si no hay texto de búsqueda, no filtramos por nombre del producto
+    const searchQuery = search ? `%${search.toLowerCase()}%` : '%'; // Si 'search' está vacío, buscamos todo
 
-    // Consultas SQL con filtro de búsqueda
+    // Consultas SQL con filtro de búsqueda opcional
     const totalQuery = `
         SELECT COUNT(*) 
         FROM products
@@ -132,12 +132,12 @@ const getProductsPaginated = async (req, res) => {
 
     let client = await pool.connect();
     try {
-        // Obtener el total de productos que coinciden con la búsqueda
+        // Obtener el total de productos que coinciden con la búsqueda (o todos si no hay búsqueda)
         const totalResponse = await client.query(totalQuery, [searchQuery]);
         const totalProducts = parseInt(totalResponse.rows[0].count, 10);
         const totalPages = Math.ceil(totalProducts / limit);
 
-        // Obtener los productos con el filtro de búsqueda y paginación
+        // Obtener los productos con el filtro de búsqueda y paginación (o sin filtro)
         const response = await client.query(productQuery, [searchQuery, limit, offset]);
         if (response.rowCount === 0) {
             return res.status(404).json({ msg: "No hay productos registrados" });
