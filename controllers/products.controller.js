@@ -108,18 +108,18 @@ const getProducts = async(req,res) => {
 };
 
 const getProductsPaginated = async (req, res) => {
-    const { page = 1, limit = 35, search = '' } = req.query;
-    const offset = (page - 1) * limit;
+    const { page = 1, limit = 35, search = '', existingProductIds = [] } = req.query;
+    const adjustedLimit = parseInt(limit) * (page);  
 
     let totalQuery;
     let productQuery;
     let searchText = '';
 
     if (search && search !== 'undefined') {
-        searchText = `%${search.toLowerCase()}%`;
+        searchText = `%${search.toLowerCase()}%`;  
     }
 
-    let queryParams = [limit, offset];
+    let queryParams = [adjustedLimit];
 
     if (searchText) {
         totalQuery = `
@@ -133,19 +133,21 @@ const getProductsPaginated = async (req, res) => {
             FROM products p
             LEFT JOIN product_images pi ON p.id = pi.product_id
             WHERE LOWER(p.product_name) LIKE $1
+            AND p.id NOT IN (${existingProductIds.join(', ')})
             ORDER BY p.id ASC
-            LIMIT $2 OFFSET $3
+            LIMIT $1
         `;
         
-        queryParams = [searchText, limit, offset];
+        queryParams = [searchText, adjustedLimit];
     } else {
         totalQuery = 'SELECT COUNT(*) FROM products';
         productQuery = `
             SELECT p.*, pi.image_name, pi.image_type, pi.image_size, pi.image_data
             FROM products p
             LEFT JOIN product_images pi ON p.id = pi.product_id
+            WHERE p.id NOT IN (${existingProductIds.join(', ')})
             ORDER BY p.id ASC
-            LIMIT $1 OFFSET $2
+            LIMIT $1
         `;
     }
 
@@ -153,6 +155,7 @@ const getProductsPaginated = async (req, res) => {
     try {
         const totalResponse = await client.query(totalQuery, searchText ? [searchText] : []);
         const totalProducts = parseInt(totalResponse.rows[0].count, 10);
+        console.log("Total de productos: ", totalProducts);
 
         const response = await client.query(productQuery, queryParams);
         if (response.rowCount === 0) {
@@ -183,16 +186,13 @@ const getProductsPaginated = async (req, res) => {
         }, {});
 
         const finalProducts = Object.values(productsWithImages);
-        console.log(`
-        *******
-        TOTAL PRODUCTS: ${totalProducts} de la página ${page} con offset de ${offset},
-        PRODUCTOS: ${finalProducts.length}
-        *******    
-        `)
+
+        console.log("Productos encontrados: ", finalProducts.length);
 
         return res.status(200).json({
             products: finalProducts,
-            totalProducts, 
+            totalProducts,
+            currentPage: parseInt(page, 10),
         });
     } catch (error) {
         console.log(error);
