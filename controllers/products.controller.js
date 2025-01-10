@@ -108,11 +108,11 @@ const getProducts = async(req,res) => {
 };
 
 const getProductsPaginated = async (req, res) => {
-    const { page = 1, limit = 1 } = req.query; 
+    const { page = 1, limit = 10 } = req.query; // Asegúrate de que el límite sea un número razonable
     const offset = (page - 1) * limit;
-    console.log(page, limit, offset)
 
-    const query = `
+    const totalQuery = 'SELECT COUNT(*) FROM products';
+    const productQuery = `
         SELECT p.*, pi.image_name, pi.image_type, pi.image_size, pi.image_data
         FROM products p
         LEFT JOIN product_images pi ON p.id = pi.product_id
@@ -122,8 +122,13 @@ const getProductsPaginated = async (req, res) => {
 
     let client = await pool.connect();
     try {
-        const response = await client.query(query, [limit, offset]);
-        console.log("Filas: ", response.rowCount)
+        // Consulta para contar todos los productos
+        const totalResponse = await client.query(totalQuery);
+        const totalProducts = parseInt(totalResponse.rows[0].count, 10);
+        const totalPages = Math.ceil(totalProducts / limit);
+
+        // Consulta para obtener los productos paginados
+        const response = await client.query(productQuery, [limit, offset]);
         if (response.rowCount === 0) {
             return res.status(404).json({ msg: "No hay productos registrados" });
         }
@@ -152,7 +157,12 @@ const getProductsPaginated = async (req, res) => {
         }, {});
 
         const finalProducts = Object.values(productsWithImages);
-        return res.status(200).json({ products: finalProducts });
+        return res.status(200).json({ 
+            products: finalProducts,
+            totalProducts,
+            totalPages,
+            currentPage: page
+        });
     } catch (error) {
         console.log(error);
         return res.status(500).json({ msg: "Error interno del servidor al encontrar los productos" });
@@ -160,6 +170,7 @@ const getProductsPaginated = async (req, res) => {
         if (client) client.release();
     }
 };
+
 
 const getProductForPromotion = async (req, res) => {
     const { product_id } = req.params;
