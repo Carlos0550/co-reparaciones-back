@@ -111,13 +111,16 @@ const getProductsPaginated = async (req, res) => {
     const { page = 1, limit = 35, search = '' } = req.query; 
     const offset = (page - 1) * limit;
     console.log("Search: ", search);
+    console.log("Offset: ", offset);
+    console.log("Limit: ", limit);
+    console.log("Page: ", page);
 
     let totalQuery;
     let productQuery;
     let searchText = '';
 
     if (search && search !== 'undefined') {
-        searchText = `%${search.toLowerCase()}%`;  // Formateamos el texto de búsqueda
+        searchText = `%${search.toLowerCase()}%`;  
     }
 
     let queryParams = [limit, offset];
@@ -138,7 +141,6 @@ const getProductsPaginated = async (req, res) => {
             LIMIT $2 OFFSET $3
         `;
         
-        // Agregamos searchText como el primer parámetro en la consulta
         queryParams = [searchText, limit, offset];
     } else {
         totalQuery = 'SELECT COUNT(*) FROM products';
@@ -153,7 +155,6 @@ const getProductsPaginated = async (req, res) => {
 
     let client = await pool.connect();
     try {
-        // Si hay un filtro de búsqueda, pasamos el parámetro de búsqueda al totalQuery
         const totalResponse = await client.query(totalQuery, searchText ? [searchText] : []);
         const totalProducts = parseInt(totalResponse.rows[0].count, 10);
         const totalPages = Math.ceil(totalProducts / limit);
