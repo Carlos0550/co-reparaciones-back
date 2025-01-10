@@ -168,7 +168,7 @@ const getProductsPaginated = async (req, res) => {
         const totalResponse = await client.query(totalQuery, searchText ? [searchText] : []);
         const totalProducts = parseInt(totalResponse.rows[0].count, 10);
         console.log("Total de productos: ", totalProducts);
-
+        console.log("Query: ", productQuery);
         const response = await client.query(productQuery, queryParams);
         if (response.rowCount === 0) {
             return res.status(404).json({ msg: "No hay productos registrados" });
