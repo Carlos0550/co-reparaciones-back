@@ -110,12 +110,12 @@ const getProducts = async(req,res) => {
 const getProductsPaginated = async (req, res) => {
     const { page = 1, limit = 35, search = '' } = req.query; 
     const offset = (page - 1) * limit;
+
     console.log("Search: ", search);
     console.log("Offset: ", offset);
     console.log("Limit: ", limit);
     console.log("Page: ", page);
 
-    let totalQuery;
     let productQuery;
     let searchText = '';
 
@@ -126,12 +126,6 @@ const getProductsPaginated = async (req, res) => {
     let queryParams = [limit, offset];
 
     if (searchText) {
-        totalQuery = `
-            SELECT COUNT(*) 
-            FROM products
-            WHERE LOWER(product_name) LIKE $1
-        `;
-
         productQuery = `
             SELECT p.*, pi.image_name, pi.image_type, pi.image_size, pi.image_data
             FROM products p
@@ -140,10 +134,8 @@ const getProductsPaginated = async (req, res) => {
             ORDER BY p.id ASC
             LIMIT $2 OFFSET $3
         `;
-        
         queryParams = [searchText, limit, offset];
     } else {
-        totalQuery = 'SELECT COUNT(*) FROM products';
         productQuery = `
             SELECT p.*, pi.image_name, pi.image_type, pi.image_size, pi.image_data
             FROM products p
@@ -155,12 +147,6 @@ const getProductsPaginated = async (req, res) => {
 
     let client = await pool.connect();
     try {
-        const totalResponse = await client.query(totalQuery, searchText ? [searchText] : []);
-        const totalProducts = parseInt(totalResponse.rows[0].count, 10);
-        console.log(totalProducts)
-        const totalPages = Math.floor(totalProducts / limit);
-        console.log("Paginas totales: ", totalPages);
-
         const response = await client.query(productQuery, queryParams);
         if (response.rowCount === 0) {
             return res.status(404).json({ msg: "No hay productos registrados" });
@@ -195,8 +181,6 @@ const getProductsPaginated = async (req, res) => {
 
         return res.status(200).json({
             products: finalProducts,
-            totalProducts,
-            totalPages,
             currentPage: parseInt(page, 10),
         });
     } catch (error) {
@@ -206,8 +190,6 @@ const getProductsPaginated = async (req, res) => {
         if (client) client.release();
     }
 };
-
-
 
 
 const getProductForPromotion = async (req, res) => {
