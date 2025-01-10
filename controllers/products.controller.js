@@ -110,15 +110,19 @@ const getProducts = async(req,res) => {
 const getProductsPaginated = async (req, res) => {
     const { page = 1, limit = 35, search = '' } = req.query; 
     const offset = (page - 1) * limit;
+    console.log("Search: ", search);
 
     let totalQuery;
     let productQuery;
+    let searchText = '';
+
+    if (search && search !== 'undefined') {
+        searchText = `%${search.toLowerCase()}%`;  // Formateamos el texto de búsqueda
+    }
 
     let queryParams = [limit, offset];
 
-    if (search) {
-        const searchQuery = `%${search.toLowerCase()}%`;
-
+    if (searchText) {
         totalQuery = `
             SELECT COUNT(*) 
             FROM products
@@ -133,9 +137,9 @@ const getProductsPaginated = async (req, res) => {
             ORDER BY p.id ASC
             LIMIT $2 OFFSET $3
         `;
-
-        queryParams.unshift(searchQuery);
-
+        
+        // Agregamos searchText como el primer parámetro en la consulta
+        queryParams = [searchText, limit, offset];
     } else {
         totalQuery = 'SELECT COUNT(*) FROM products';
         productQuery = `
@@ -149,7 +153,8 @@ const getProductsPaginated = async (req, res) => {
 
     let client = await pool.connect();
     try {
-        const totalResponse = await client.query(totalQuery, queryParams.slice(0, 1));
+        // Si hay un filtro de búsqueda, pasamos el parámetro de búsqueda al totalQuery
+        const totalResponse = await client.query(totalQuery, searchText ? [searchText] : []);
         const totalProducts = parseInt(totalResponse.rows[0].count, 10);
         const totalPages = Math.ceil(totalProducts / limit);
 
@@ -187,7 +192,7 @@ const getProductsPaginated = async (req, res) => {
             products: finalProducts,
             totalProducts,
             totalPages,
-            currentPage: parseInt(page, 10)
+            currentPage: parseInt(page, 10),
         });
     } catch (error) {
         console.log(error);
@@ -196,6 +201,7 @@ const getProductsPaginated = async (req, res) => {
         if (client) client.release();
     }
 };
+
 
 
 
