@@ -108,7 +108,7 @@ const getProducts = async(req,res) => {
 };
 
 const getProductsPaginated = async (req, res) => {
-    const { page = 1, limit = 35, search = '', existingProductIds = [] } = req.query;
+    const { page = 1, limit = 35, search = '', productsIds } = req.query;
     const adjustedLimit = parseInt(limit) * (page);  
 
     let totalQuery;
@@ -120,6 +120,14 @@ const getProductsPaginated = async (req, res) => {
     }
 
     let queryParams = [adjustedLimit];
+    let existingProductIds = [];
+ 
+    try {
+        existingProductIds = JSON.parse(productsIds) || []
+    } catch (error) {
+        console.log(error)
+    }
+
 
     if (searchText) {
         totalQuery = `
