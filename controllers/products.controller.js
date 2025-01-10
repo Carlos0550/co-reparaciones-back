@@ -127,7 +127,7 @@ const getProductsPaginated = async (req, res) => {
         existingProductIds = productsIds.map(id => parseInt(id, 10));
     } else {
         try {
-            existingProductIds = JSON.parse(productsIds);
+            existingProductIds = JSON.parse(productsIds).map(id => parseInt(id, 10));;
         } catch (error) {
             console.log('Error al parsear los IDs:', error);
         }
