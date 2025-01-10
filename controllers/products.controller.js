@@ -189,6 +189,8 @@ const getProductsPaginated = async (req, res) => {
 
         const finalProducts = Object.values(productsWithImages);
 
+        console.log("Productos encontrados: ", finalProducts.length);
+
         return res.status(200).json({
             products: finalProducts,
             totalProducts,
