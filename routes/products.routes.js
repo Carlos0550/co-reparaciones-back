@@ -2,13 +2,14 @@ const express = require("express");
 const router = express.Router();
 
 const multer = require("multer");
-const { saveProduct, getProducts, updateProduct, deleteProduct, substractStock } = require("../controllers/products.controller");
+const { saveProduct, getProducts, updateProduct, deleteProduct, substractStock, getProductsPaginated } = require("../controllers/products.controller");
 
 const storage = multer.memoryStorage()
 const upload = multer({storage})
 
 router.post("/save-product", upload.array("images"), saveProduct);
 router.get("/get-products", getProducts)
+router.get("/get-paginated-products", getProductsPaginated)
 router.put("/edit-product/:product_id", upload.array("images"), updateProduct)
 router.delete("/delete-product/:product_id", deleteProduct)
 router.post("/substract-stock", upload.none(), substractStock)

@@ -107,6 +107,60 @@ const getProducts = async(req,res) => {
     }
 };
 
+const getProductsPaginated = async (req, res) => {
+    const { page = 1, limit = 1 } = req.query; 
+    const offset = (page - 1) * limit;
+    console.log(page, limit, offset)
+
+    const query = `
+        SELECT p.*, pi.image_name, pi.image_type, pi.image_size, pi.image_data
+        FROM products p
+        LEFT JOIN product_images pi ON p.id = pi.product_id
+        ORDER BY p.id ASC
+        LIMIT $1 OFFSET $2
+    `;
+
+    let client = await pool.connect();
+    try {
+        const response = await client.query(query, [limit, offset]);
+        console.log("Filas: ", response.rowCount)
+        if (response.rowCount === 0) {
+            return res.status(404).json({ msg: "No hay productos registrados" });
+        }
+
+        const products = response.rows;
+
+        const productsWithImages = products.reduce((acc, product) => {
+            if (!acc[product.id]) {
+                acc[product.id] = { ...product, images: [] };
+            }
+
+            if (Buffer.isBuffer(product.image_data)) {
+                const imageBase64 = product.image_data.toString("base64");
+
+                acc[product.id].images.push({
+                    image_name: product.image_name,
+                    image_type: product.image_type,
+                    image_size: product.image_size,
+                    image_data: `data:${product.image_type};base64,${imageBase64}`,
+                });
+            } else {
+                console.error(`Image data for product ${product.id} is not a valid Buffer.`);
+            }
+
+            return acc;
+        }, {});
+
+        const finalProducts = Object.values(productsWithImages);
+        return res.status(200).json({ products: finalProducts });
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({ msg: "Error interno del servidor al encontrar los productos" });
+    } finally {
+        if (client) client.release();
+    }
+};
+
 const updateProduct = async (req, res) => {
     const { product_name, product_description, product_price, product_category, imagesWithEdit, product_stock } = req.body;
     const images = req.files; 
@@ -271,5 +325,5 @@ const substractStock = async(req, res) => {
 
 module.exports = {
     saveProduct, getProducts, updateProduct, deleteProduct,
-    substractStock
+    substractStock, getProductsPaginated
 }
