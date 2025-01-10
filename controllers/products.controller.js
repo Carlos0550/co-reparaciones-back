@@ -108,8 +108,8 @@ const getProducts = async(req,res) => {
 };
 
 const getProductsPaginated = async (req, res) => {
-    const { page = 1, limit = 35, search = '', productsIds } = req.query;
-    const adjustedLimit = parseInt(limit) * (page);  
+    const { page = 1, limit = 35, search = '', productsIds = [] } = req.query;
+    const adjustedLimit = parseInt(limit) * page;
 
     let totalQuery;
     let productQuery;
@@ -121,13 +121,19 @@ const getProductsPaginated = async (req, res) => {
 
     let queryParams = [adjustedLimit];
     let existingProductIds = [];
- 
-    try {
-        existingProductIds = JSON.parse(productsIds) || []
-    } catch (error) {
-        console.log(error)
+
+
+    if (Array.isArray(productsIds)) {
+        existingProductIds = productsIds.map(id => parseInt(id, 10));
+    } else {
+        try {
+            existingProductIds = JSON.parse(productsIds);
+        } catch (error) {
+            console.log('Error al parsear los IDs:', error);
+        }
     }
 
+    console.log(existingProductIds)
 
     if (searchText) {
         totalQuery = `
@@ -135,25 +141,27 @@ const getProductsPaginated = async (req, res) => {
             FROM products
             WHERE LOWER(product_name) LIKE $1
         `;
-
+    
+        // Construir la consulta para los productos solo si existingProductIds no está vacío
         productQuery = `
             SELECT p.*, pi.image_name, pi.image_type, pi.image_size, pi.image_data
             FROM products p
             LEFT JOIN product_images pi ON p.id = pi.product_id
             WHERE LOWER(p.product_name) LIKE $1
-            AND p.id NOT IN (${existingProductIds.join(', ')})
+            ${existingProductIds.length > 0 ? `AND p.id NOT IN (${existingProductIds.join(', ')})` : ''}
             ORDER BY p.id ASC
-            LIMIT $1
+            LIMIT $2
         `;
-        
+    
         queryParams = [searchText, adjustedLimit];
     } else {
         totalQuery = 'SELECT COUNT(*) FROM products';
+        
         productQuery = `
             SELECT p.*, pi.image_name, pi.image_type, pi.image_size, pi.image_data
             FROM products p
             LEFT JOIN product_images pi ON p.id = pi.product_id
-            WHERE p.id NOT IN (${existingProductIds.join(', ')})
+            ${existingProductIds.length > 0 ? `WHERE p.id NOT IN (${existingProductIds.join(', ')})` : ''}
             ORDER BY p.id ASC
             LIMIT $1
         `;
@@ -209,9 +217,6 @@ const getProductsPaginated = async (req, res) => {
         if (client) client.release();
     }
 };
-
-
-
 
 
 const getProductForPromotion = async (req, res) => {
