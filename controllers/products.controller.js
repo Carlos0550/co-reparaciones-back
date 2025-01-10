@@ -108,44 +108,58 @@ const getProducts = async(req,res) => {
 };
 
 const getProductsPaginated = async (req, res) => {
-    const { page = 1, limit = 35, search = '' } = req.query; // 'search' sigue siendo un parámetro opcional
+    const { page = 1, limit = 35, search = '' } = req.query; 
     const offset = (page - 1) * limit;
 
-    // Si no hay texto de búsqueda, no filtramos por nombre del producto
-    const searchQuery = search ? `%${search.toLowerCase()}%` : '%'; // Si 'search' está vacío, buscamos todo
+    let totalQuery;
+    let productQuery;
 
-    // Consultas SQL con filtro de búsqueda opcional
-    const totalQuery = `
-        SELECT COUNT(*) 
-        FROM products
-        WHERE LOWER(product_name) LIKE $1
-    `;
+    let queryParams = [limit, offset];
 
-    const productQuery = `
-        SELECT p.*, pi.image_name, pi.image_type, pi.image_size, pi.image_data
-        FROM products p
-        LEFT JOIN product_images pi ON p.id = pi.product_id
-        WHERE LOWER(p.product_name) LIKE $1
-        ORDER BY p.id ASC
-        LIMIT $2 OFFSET $3
-    `;
+    if (search) {
+        const searchQuery = `%${search.toLowerCase()}%`;
+
+        totalQuery = `
+            SELECT COUNT(*) 
+            FROM products
+            WHERE LOWER(product_name) LIKE $1
+        `;
+
+        productQuery = `
+            SELECT p.*, pi.image_name, pi.image_type, pi.image_size, pi.image_data
+            FROM products p
+            LEFT JOIN product_images pi ON p.id = pi.product_id
+            WHERE LOWER(p.product_name) LIKE $1
+            ORDER BY p.id ASC
+            LIMIT $2 OFFSET $3
+        `;
+
+        queryParams.unshift(searchQuery);
+
+    } else {
+        totalQuery = 'SELECT COUNT(*) FROM products';
+        productQuery = `
+            SELECT p.*, pi.image_name, pi.image_type, pi.image_size, pi.image_data
+            FROM products p
+            LEFT JOIN product_images pi ON p.id = pi.product_id
+            ORDER BY p.id ASC
+            LIMIT $1 OFFSET $2
+        `;
+    }
 
     let client = await pool.connect();
     try {
-        // Obtener el total de productos que coinciden con la búsqueda (o todos si no hay búsqueda)
-        const totalResponse = await client.query(totalQuery, [searchQuery]);
+        const totalResponse = await client.query(totalQuery, queryParams.slice(0, 1));
         const totalProducts = parseInt(totalResponse.rows[0].count, 10);
         const totalPages = Math.ceil(totalProducts / limit);
 
-        // Obtener los productos con el filtro de búsqueda y paginación (o sin filtro)
-        const response = await client.query(productQuery, [searchQuery, limit, offset]);
+        const response = await client.query(productQuery, queryParams);
         if (response.rowCount === 0) {
             return res.status(404).json({ msg: "No hay productos registrados" });
         }
 
         const products = response.rows;
 
-        // Procesar las imágenes de los productos
         const productsWithImages = products.reduce((acc, product) => {
             if (!acc[product.id]) {
                 acc[product.id] = { ...product, images: [] };
@@ -167,7 +181,6 @@ const getProductsPaginated = async (req, res) => {
             return acc;
         }, {});
 
-        // Devolver los productos finales con imágenes procesadas
         const finalProducts = Object.values(productsWithImages);
 
         return res.status(200).json({
